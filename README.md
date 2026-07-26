@@ -11,8 +11,8 @@ Learning IMU data acquisition and processing using an ESP32 and MPU6050
 
 - [x] Read accelerometer
 - [x] Read gyroscope
-- [ ] Timestamped CSV logging
-- [ ] Python serial logger
+- [X] Timestamped CSV logging
+- [X] Python serial logger
 - [ ] Sensor calibration
 - [ ] Signal filtering
 - [ ] Orientation estimation
