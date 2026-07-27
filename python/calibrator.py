@@ -1,43 +1,21 @@
 from pathlib import Path
 import csv
 import numpy as np
+from imu_utils import load_imu_dataset, GRAVITY
 
-INPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "raw" / "20260725_221826_calibration.csv"
-OUTPUT_FILE = Path(__file__).resolve().parent.parent / "data" / "calibrated" / "20260725_221826_calibration_calibrated.csv"
-gravity = 9.80665
-
-def calibrate_imu_data(input_file, output_file):
+def calibrate_imu_data(input_csv: Path, output_csv: Path):
     # check for input file existence
-    if not input_file.exists():
-        print(f"Input file {input_file} does not exist.")
+    dataset = load_imu_dataset(input_csv)
+    if dataset is None:
+        print(f"Failed to load dataset from {input_csv}. Calibration aborted.")
         return
     
-    # read input CSV file and section column data into lists
-    with open(input_file, mode='r') as file:
-        
-        # read header
-        header_str = file.readline().strip()
-        header = header_str.split(',')  
-        
-    try:
-        IMU_data = np.loadtxt(input_file, delimiter=',', skiprows=1)
-    
-    except Exception as e:
-        print(f"Error reading input file: {e}")
-        return
-    
-    if IMU_data.size == 0:
-        print("No data found in the input file.")
-        return
-    
-    total_samples = IMU_data.shape[0]
-    
-    means = np.mean(IMU_data, axis=0)
+    means = np.mean(dataset.raw_data, axis=0)
     
     # Calculate offsets for accelerometer and gyroscope
     accel_x_offset = means[1]
     accel_y_offset = means[2]
-    accel_z_offset = means[3] - gravity
+    accel_z_offset = means[3] - GRAVITY
     
     gyro_x_offset = means[4]
     gyro_y_offset = means[5]
@@ -50,14 +28,18 @@ def calibrate_imu_data(input_file, output_file):
     print(f"Accel X Offset: {accel_x_offset:.4f} m/s^2 | Accel Y Offset: {accel_y_offset:.4f} m/s^2 | Accel Z Offset: {accel_z_offset:.4f} m/s^2")
     print(f"Gyro X Offset: {gyro_x_offset:.4f} rad/s | Gyro Y Offset: {gyro_y_offset:.4f} rad/s | Gyro Z Offset: {gyro_z_offset:.4f} rad/s")
     
-    calibrated_data = IMU_data - offsets
+    calibrated_data = dataset.raw_data - offsets
     
-    calibrated_data[:, 0] = IMU_data[:, 0]  # Preserve timestamps
-    calibrated_data[:, 7] = IMU_data[:, 7]  # Preserve temperature
+    calibrated_data[:, 0] = dataset.raw_data[:, 0]  # Preserve timestamps
+    calibrated_data[:, 7] = dataset.raw_data[:, 7]  # Preserve temperature
     
     # # Write calibrated data to output CSV file
-    np.savetxt(output_file, calibrated_data, delimiter=',', header=','.join(header), comments='', fmt='%.4f')
-    print("Calibrated data saved to:", output_file)
+    np.savetxt(output_csv, calibrated_data, delimiter=',', header=','.join(dataset.header), comments='', fmt='%.4f')
+    print("Calibrated data saved to:", output_csv)
     
 if __name__ == "__main__":
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    INPUT_FILE = BASE_DIR / "data" / "raw" / "20260726_234729_static002.csv"
+    OUTPUT_FILE = BASE_DIR / "data" / "calibrated" / "20260726_234729_static002_calibrated.csv"
+
     calibrate_imu_data(INPUT_FILE, OUTPUT_FILE)

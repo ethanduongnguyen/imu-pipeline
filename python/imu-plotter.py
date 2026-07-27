@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+from imu_utils import load_imu_dataset, GRAVITY
 
 GRAVITY  = 9.80665  # m/s²
 
-def plot_sensor_axes(axis, time, data_x, data_y, data_z, title, y_label, is_accel = True):
-    axis.plot(time, data_x, label='X', color='r', alpha=0.8)
-    axis.plot(time, data_y, label='Y', color='g', alpha=0.8)
-    axis.plot(time, data_z, label='Z', color='b', alpha=0.8)
+def plot_sensor_axes(axis, time, sensor_data, title, y_label, is_accel = True):
+    axis.plot(time, sensor_data[:, 0], label='X', color='r', alpha=0.8)
+    axis.plot(time, sensor_data[:, 1], label='Y', color='g', alpha=0.8)
+    axis.plot(time, sensor_data[:, 2], label='Z', color='b', alpha=0.8)
     
     # Reference lines for accelerometer data
     axis.axhline(0, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
@@ -20,57 +21,41 @@ def plot_sensor_axes(axis, time, data_x, data_y, data_z, title, y_label, is_acce
     axis.legend(loc='upper right', fontsize = 'small')
 
 def plot_imu_datasets(*csv_files: Path, output_plot: Path = None, title: str = "IMU Data Visualization"):
-    valid_files = [file for file in csv_files if file.exists()]
+    datasets = [load_imu_dataset(file) for file in csv_files]
+    valid_datasets = [ds for ds in datasets if ds is not None]
     
-    if not valid_files: 
+    if not valid_datasets: 
         print("No valid CSV files provided for plotting.")
         return
     
-    num_datasets = len(valid_files)
+    num_cols = len(valid_datasets)
     
     fig, axes = plt.subplots(
         nrows = 2,
-        ncols = num_datasets,
-        figsize = (6 * num_datasets, 10),
+        ncols = num_cols,
+        figsize = (6 * num_cols, 10),
         sharex = True,
         squeeze = False
     )
     
     fig.suptitle(title, fontsize = 16, fontweight = 'bold')
     
-    for col_idx, file_path in enumerate(valid_files):
-        try:
-            data = np.loadtxt(file_path, delimiter=',', skiprows=1)
-        except Exception as e:
-            print(f"Error reading {file_path}: {e}")
-            continue
+    for col_idx, dataset in enumerate(valid_datasets):
+        label = dataset.file_path.stem.replace('_', ' ').title()
         
-        if data.size == 0:
-            print(f"No data found in {file_path}.")
-            continue
-        
-        time = (data[:, 0] - data[0,0]) / 1e6  # Convert microseconds to seconds
-        accel_x, accel_y, accel_z = data[:, 1], data[:, 2], data[:, 3]
-        gyro_x, gyro_y, gyro_z = data[:, 4], data[:, 5], data[:, 6]
-        
-        file_label = file_path.stem.replace('_', ' ').title()
-        
+        # Row 0: Accelerometer Data
         plot_sensor_axes(axes[0, col_idx],
-                         time, 
-                         accel_x,
-                         accel_y,
-                         accel_z,
-                         f"Accelerometer Data\n{file_label}", 
+                         dataset.time, 
+                         dataset.accel,
+                         f"Accelerometer Data\n{label}", 
                          "Acceleration (m/s²)", 
                          is_accel=True
                          )
         
         plot_sensor_axes(axes[1, col_idx],
-                        time,
-                        gyro_x,
-                        gyro_y,
-                        gyro_z,
-                        f"Gyroscope Data\n{file_label}",
+                        dataset.time,
+                        dataset.gyro,
+                        f"Gyroscope Data\n{label}",
                         "Angular Velocity (rad/s)",
                         is_accel=False
                         )
@@ -88,12 +73,12 @@ def plot_imu_datasets(*csv_files: Path, output_plot: Path = None, title: str = "
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent
     
-    RAW_FILE = BASE_DIR / "data" / "raw" / "20260726_225143_static001.csv"
-    CALIBRATED_FILE = BASE_DIR / "data" / "calibrated" / "20260726_225143_static001_calibrated.csv"
+    RAW_FILE = BASE_DIR / "data" / "raw" / "20260726_234729_static002.csv"
+    CALIBRATED_FILE = BASE_DIR / "data" / "calibrated" / "20260726_234729_static002_calibrated.csv"
     
     plot_imu_datasets(
         RAW_FILE,
         CALIBRATED_FILE,
-        output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison.png",
+        output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison_static002.png",
         title = "IMU Data Comparison: Raw vs Calibrated"
         )
