@@ -11,6 +11,10 @@ class BaseFilter(ABC):
     def reset(self):
         pass
     
+    @abstractmethod
+    def getMetadata(self) -> dict:
+        pass
+    
     def __call__(self, measurement):
         return self.update(measurement)
     
@@ -44,6 +48,13 @@ class MovingAverage(BaseFilter):
         self.buffer.append(measurement)
         return np.mean(self.buffer, axis = 0)
 
+    def getMetadata(self) -> dict:
+        return {
+            "filter_type": "Moving Average",
+            "window_size": self.window_size,
+            "num_channels": self.num_channels
+        }
+
 class ExponentialMovingAverage(BaseFilter):
     def __init__(self, alpha: float = 0.9):
         self.alpha = alpha
@@ -61,3 +72,9 @@ class ExponentialMovingAverage(BaseFilter):
         ema = self.alpha * measurement + (1 - self.alpha) * self.prev_ema
         self.prev_ema = ema
         return ema
+    
+    def getMetadata(self) -> dict:
+            return {
+                "filter_type": "Exponential Moving Average",
+                "alpha" : self.alpha
+            }

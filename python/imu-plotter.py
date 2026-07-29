@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
-from python.dataset import load_imu_dataset, GRAVITY
+from dataset import load_imu_dataset, GRAVITY
 
 def plot_sensor_axes(axis, time, sensor_data, title, y_label, is_accel = True):
     axis.plot(time, sensor_data[:, 0], label='X', color='r', alpha=0.8)
@@ -71,12 +71,12 @@ def plot_imu_datasets(*csv_files: Path, output_plot: Path = None, title: str = "
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent
     
-    RAW_FILE = BASE_DIR / "data" / "raw" / "20260726_234729_static002.csv"
-    CALIBRATED_FILE = BASE_DIR / "data" / "calibrated" / "20260726_234729_static002_calibrated.csv"
+    RAW_FILE = BASE_DIR / "data" / "raw" / "20260729_190825_dynamic001.csv"
+    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed.csv"
     
     plot_imu_datasets(
         RAW_FILE,
-        CALIBRATED_FILE,
+        PROCESSED_FILE,
         output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison_static002.png",
         title = "IMU Data Comparison: Raw vs Calibrated"
         )

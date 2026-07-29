@@ -7,9 +7,9 @@ def run_processing_pipeline():
     BASE_DIR = Path(__file__).resolve().parent.parent
     
     # Define file paths
-    RAW_DATA_FILE = BASE_DIR / "data" / "raw" / ""
+    RAW_DATA_FILE = BASE_DIR / "data" / "raw" / "20260729_190825_dynamic001.csv"
     OFFSETS_FILE = BASE_DIR / "data" / "calibration" / "sensor_offsets.json"
-    PROCESSED_FILE = BASE_DIR / "data" / "processed" / ""
+    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed.csv"
     
     # Load raw dataset
     print(f"Loading raw dataset from {RAW_DATA_FILE.name}")
@@ -28,14 +28,15 @@ def run_processing_pipeline():
     
     # Apply filters
     print("Applying Exponential Moving Average filter...")
-    ema_filter = ExponentialMovingAverage(alpha = 0.85)
+    MovingAverageFilter = MovingAverage(window_size= 5, num_channels = 3)
     
-    dataset.accel = ema_filter.apply(dataset.accel)
+    dataset.accel = MovingAverageFilter.apply(dataset.accel)
     
-    ema_filter.reset()
-    dataset.gyro = ema_filter.apply(dataset.gyro)
+    MovingAverageFilter.reset()
+    dataset.gyro = MovingAverageFilter.apply(dataset.gyro)
     
     dataset.saveDataset(PROCESSED_FILE)
+    print(f"Processed data saved to: {PROCESSED_FILE}")
     
 if __name__ == '__main__':
     run_processing_pipeline()

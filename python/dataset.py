@@ -1,5 +1,7 @@
 from pathlib import Path
 import numpy as np
+import datetime
+import json
 
 GRAVITY = 9.80665  # m/s²
 
@@ -12,6 +14,7 @@ class IMUDataset:
         self.accel = accel # Shape: (N, 3) for X, Y, Z accelerometer data
         self.gyro = gyro # Shape: (N, 3) for X, Y, Z gyroscope data
         self.raw_data = raw_data
+        self.metadata = {}
         
     def saveDataset(self, output_path: Path):
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -27,6 +30,18 @@ class IMUDataset:
             comments = ',',
             fmt = '%4f'
         )
+        
+        print(f"Processed datasat saved to: {output_path}")
+        
+        # Save companion metadata JSON if metadata exists
+        if self.metadata:
+            self.metadata["processing_timestamp"] = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.metadata["original_file"] = self.file_path.name
+            
+            metadata_path = output_path.with_suffix('.json')
+            with open(metadata_path, 'w', encoding='utf-8') as file:
+                json.dump(self.metadata, file, indent=4)
+            print(f"Metadata saved to {metadata_path}")
     
 def load_imu_dataset(file_path: Path) -> IMUDataset | None:
     csv_path = Path(file_path)
