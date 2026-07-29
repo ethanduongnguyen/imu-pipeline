@@ -12,6 +12,21 @@ class IMUDataset:
         self.accel = accel # Shape: (N, 3) for X, Y, Z accelerometer data
         self.gyro = gyro # Shape: (N, 3) for X, Y, Z gyroscope data
         self.raw_data = raw_data
+        
+    def saveDataset(self, output_path: Path):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        self.raw_data[:, 1:4] = self.accel
+        self.raw_data[:, 4:7] = self.gyro
+        
+        np.savetxt(
+            output_path, 
+            self.raw_data,
+            delimiter = ',',
+            header = ','.join(self.header),
+            comments = ',',
+            fmt = '%4f'
+        )
     
 def load_imu_dataset(file_path: Path) -> IMUDataset | None:
     csv_path = Path(file_path)

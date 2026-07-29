@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
-from imu_utils import load_imu_dataset, GRAVITY
+from python.dataset import load_imu_dataset, GRAVITY
 
 def plot_sensor_axes(axis, time, sensor_data, title, y_label, is_accel = True):
     axis.plot(time, sensor_data[:, 0], label='X', color='r', alpha=0.8)

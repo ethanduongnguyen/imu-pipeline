@@ -1,7 +1,7 @@
 from pathlib import Path
 import csv
 import numpy as np
-from imu_utils import load_imu_dataset, GRAVITY
+from python.dataset import load_imu_dataset, GRAVITY
 
 def calibrate_imu_data(input_csv: Path, output_csv: Path):
     # check for input file existence
