@@ -24,7 +24,7 @@ def saveOffsets(offsets: dict, output_json: Path):
         json.dump(offsets, file, indent=4)
     print(f"Offsets successfully saved to: {output_json}")
     
-def loadOffsets(input_json: Path, output_json: Path):
+def loadOffsets(input_json: Path) -> dict:
     # Loads calibration offsets from JSON file
     if not input_json.exists:
         print(f"Calibration file not found: {input_json}")
