@@ -26,8 +26,8 @@ def run_processing_pipeline():
         return
     applyOffsets(dataset, offsets)
     
-    # Apply filters
-    print("Applying Exponential Moving Average filter...")
+    # Apply filters. Select filter from filters.py module
+    print("Applying Moving Average filter...")
     MovingAverageFilter = MovingAverage(window_size= 5, num_channels = 3)
     
     dataset.accel = MovingAverageFilter.apply(dataset.accel)
@@ -35,8 +35,13 @@ def run_processing_pipeline():
     MovingAverageFilter.reset()
     dataset.gyro = MovingAverageFilter.apply(dataset.gyro)
     
+    dataset.metadata["filtering"] = {
+        "applied": True,
+        "accel_filter": MovingAverageFilter.getMetadata(),
+        "gyro_filter": MovingAverageFilter.getMetadata()
+    }
+    
     dataset.saveDataset(PROCESSED_FILE)
-    print(f"Processed data saved to: {PROCESSED_FILE}")
     
 if __name__ == '__main__':
     run_processing_pipeline()

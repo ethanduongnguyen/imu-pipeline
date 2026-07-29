@@ -1,0 +1,17 @@
+{
+    "filtering": {
+        "applied": true,
+        "accel_filter": {
+            "filter_type": "Moving Average",
+            "window_size": 5,
+            "num_channels": 3
+        },
+        "gyro_filter": {
+            "filter_type": "Moving Average",
+            "window_size": 5,
+            "num_channels": 3
+        }
+    },
+    "processing_timestamp": "20260729_194106",
+    "original_file": "20260729_190825_dynamic001.csv"
+}

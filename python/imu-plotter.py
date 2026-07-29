@@ -77,6 +77,6 @@ if __name__ == "__main__":
     plot_imu_datasets(
         RAW_FILE,
         PROCESSED_FILE,
-        output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison_static002.png",
+        output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison_dynamic001.png",
         title = "IMU Data Comparison: Raw vs Calibrated"
         )
