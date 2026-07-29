@@ -43,3 +43,21 @@ class MovingAverage(BaseFilter):
     def update(self, measurement: np.ndarray) -> np.ndarray:
         self.buffer.append(measurement)
         return np.mean(self.buffer, axis = 0)
+
+class ExponentialMovingAverage(BaseFilter):
+    def __init__(self, alpha: float = 0.9):
+        self.alpha = alpha
+        self.prev_ema = None
+        self.reset()
+        
+    def reset(self):
+        self.prev_ema = None
+        
+    def update(self, measurement: np.ndarray) -> np.ndarray:
+        if self.prev_ema is None:
+            self.prev_ema = np.ndarray(measurement, dtype=float)
+            return self.prev_ema
+        
+        ema = self.alpha * measurement + (1 - self.alpha) * self.prev_ema
+        self.prev_ema = ema
+        return ema
