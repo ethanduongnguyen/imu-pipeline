@@ -66,7 +66,7 @@ class ExponentialMovingAverage(BaseFilter):
         
     def update(self, measurement: np.ndarray) -> np.ndarray:
         if self.prev_ema is None:
-            self.prev_ema = np.ndarray(measurement, dtype=float)
+            self.prev_ema = np.array(measurement, dtype=float)
             return self.prev_ema
         
         ema = self.alpha * measurement + (1 - self.alpha) * self.prev_ema

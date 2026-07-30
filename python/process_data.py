@@ -9,7 +9,7 @@ def run_processing_pipeline():
     # Define file paths
     RAW_DATA_FILE = BASE_DIR / "data" / "raw" / "20260729_190825_dynamic001.csv"
     OFFSETS_FILE = BASE_DIR / "data" / "calibration" / "sensor_offsets.json"
-    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed.csv"
+    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed_2.csv"
     
     # Load raw dataset
     print(f"Loading raw dataset from {RAW_DATA_FILE.name}")
@@ -26,19 +26,33 @@ def run_processing_pipeline():
         return
     applyOffsets(dataset, offsets)
     
-    # Apply filters. Select filter from filters.py module
-    print("Applying Moving Average filter...")
-    MovingAverageFilter = MovingAverage(window_size= 5, num_channels = 3)
+    # Apply filters. Select filter from filters.py script
     
-    dataset.accel = MovingAverageFilter.apply(dataset.accel)
+    # print("Applying Moving Average filter...")
+    # MovingAverageFilter = MovingAverage(window_size= 5, num_channels = 3)
     
-    MovingAverageFilter.reset()
-    dataset.gyro = MovingAverageFilter.apply(dataset.gyro)
+    # dataset.accel = MovingAverageFilter.apply(dataset.accel)
+    
+    # MovingAverageFilter.reset()
+    # dataset.gyro = MovingAverageFilter.apply(dataset.gyro)
+    
+    # dataset.metadata["filtering"] = {
+    #     "applied": True,
+    #     "accel_filter": MovingAverageFilter.getMetadata(),
+    #     "gyro_filter": MovingAverageFilter.getMetadata()
+    # }
+    
+    print("Applying Expoential Moving Average filter...")
+    ExponentialMovingAverageFilter = ExponentialMovingAverage(alpha = 0.5)
+    
+    dataset.accel = ExponentialMovingAverageFilter.apply(dataset.accel)
+    ExponentialMovingAverageFilter.reset()
+    dataset.gyro = ExponentialMovingAverageFilter.apply(dataset.gyro)
     
     dataset.metadata["filtering"] = {
         "applied": True,
-        "accel_filter": MovingAverageFilter.getMetadata(),
-        "gyro_filter": MovingAverageFilter.getMetadata()
+        "accel_filter" : ExponentialMovingAverageFilter.getMetadata(),
+        "gyro_filter": ExponentialMovingAverageFilter.getMetadata()
     }
     
     dataset.saveDataset(PROCESSED_FILE)
