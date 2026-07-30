@@ -53,6 +53,8 @@ class IMUDataset:
         avg_dt = np.mean(np.diff(self.time))
         if avg_dt == 0:
             return 0.0
+        
+        return 1.0 / avg_dt
     
 def load_imu_dataset(file_path: Path) -> IMUDataset | None:
     csv_path = Path(file_path)
