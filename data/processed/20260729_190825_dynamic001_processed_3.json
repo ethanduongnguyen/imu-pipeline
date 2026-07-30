@@ -1,0 +1,19 @@
+{
+    "filtering": {
+        "applied": true,
+        "accel_filter": {
+            "filter_type": "Zero-Phase Butterworth",
+            "cutoff_frequency": 10,
+            "sampling_rate": 43.48,
+            "order": 4
+        },
+        "gyro_filter": {
+            "filter_type": "Zero-Phase Butterworth",
+            "cutoff_frequency": 10,
+            "sampling_rate": 43.48,
+            "order": 4
+        }
+    },
+    "processing_timestamp": "20260730_014017",
+    "original_file": "20260729_190825_dynamic001.csv"
+}

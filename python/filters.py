@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from collections import deque
+import scipy.signal as signal
 
 class BaseFilter(ABC):
     @abstractmethod
@@ -78,3 +79,34 @@ class ExponentialMovingAverage(BaseFilter):
                 "filter_type": "Exponential Moving Average",
                 "alpha" : self.alpha
             }
+            
+class ZeroPhaseButterworth(BaseFilter):
+    def __init__(self, cutoff_freq: float, sampling_rate: float, order: int = 4):
+        self.cutoff_freq = cutoff_freq
+        self.sampling_rate = sampling_rate
+        self.order = order
+        
+        # Nyquist frequency is half the sampling rate
+        nyquist = 0.5 * self.sampling_rate
+        normal_cutoff = self.cutoff_freq / nyquist
+        
+        # Generate filter coefficients (numerator a, denominator b)
+        self.b, self.a = signal.butter(self.order, normal_cutoff, btype='low', analog=False)
+        
+    def update(self, measurement: np.ndarray) -> np.ndarray:
+        raise NotImplementedError("Zero-phase filtering requires the entire array. Use apply() instead.")
+    
+    def reset(self):
+        pass
+    
+    def apply(self, data: np.ndarray) -> np.ndarray:
+        # Applies forward-backward zero-phase filter
+        return signal.filtfilt(self.b, self.a, data, axis=0)
+    
+    def getMetadata(self) -> dict:
+        return {
+            "filter_type" : "Zero-Phase Butterworth",
+            "cutoff_frequency" : self.cutoff_freq,
+            "sampling_rate" : round(self.sampling_rate, 2),
+            "order" : self.order
+        }

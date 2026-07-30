@@ -1,7 +1,7 @@
 from pathlib import Path
 from dataset import load_imu_dataset
 from calibration import loadOffsets, applyOffsets
-from filters import ExponentialMovingAverage, MovingAverage
+from filters import ExponentialMovingAverage, MovingAverage, ZeroPhaseButterworth
 
 def run_processing_pipeline():
     BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,7 +9,7 @@ def run_processing_pipeline():
     # Define file paths
     RAW_DATA_FILE = BASE_DIR / "data" / "raw" / "20260729_190825_dynamic001.csv"
     OFFSETS_FILE = BASE_DIR / "data" / "calibration" / "sensor_offsets.json"
-    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed_2.csv"
+    PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed_3.csv"
     
     # Load raw dataset
     print(f"Loading raw dataset from {RAW_DATA_FILE.name}")
@@ -17,6 +17,10 @@ def run_processing_pipeline():
     if dataset is None:
         print(f"Could not find raw data file: {RAW_DATA_FILE}")
         return
+    
+    # Calculate sampling rate
+    fs = dataset.sampling_rate
+    print(f"Detected sampling rate: {fs:.2f} Hz")
     
     # Apply offset calibration to dataset
     print("Applying calibration...")
@@ -31,15 +35,16 @@ def run_processing_pipeline():
     print("Applying filter...")
     MovingAverageFilter = MovingAverage(window_size = 5, num_channels=3)
     ExponentialMovingAverageFilter = ExponentialMovingAverage(alpha = 0.5)
+    ButterworthFilter = ZeroPhaseButterworth(cutoff_freq = 10, sampling_rate = fs, order=4)
     
-    dataset.accel = ExponentialMovingAverageFilter.apply(dataset.accel)
-    ExponentialMovingAverageFilter.reset()
-    dataset.gyro = ExponentialMovingAverageFilter.apply(dataset.gyro)
+    dataset.accel = ButterworthFilter.apply(dataset.accel)
+    # ExponentialMovingAverageFilter.reset()
+    dataset.gyro = ButterworthFilter.apply(dataset.gyro)
     
     dataset.metadata["filtering"] = {
         "applied": True,
-        "accel_filter" : ExponentialMovingAverageFilter.getMetadata(),
-        "gyro_filter": ExponentialMovingAverageFilter.getMetadata()
+        "accel_filter" : ButterworthFilter.getMetadata(),
+        "gyro_filter": ButterworthFilter.getMetadata()
     }
     
     dataset.saveDataset(PROCESSED_FILE)

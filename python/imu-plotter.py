@@ -74,11 +74,13 @@ if __name__ == "__main__":
     RAW_FILE = BASE_DIR / "data" / "raw" / "20260729_190825_dynamic001.csv"
     PROCESSED_FILE = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed.csv"
     PROCESSED_FILE_2 = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed_2.csv"
+    PROCESSED_FILE_3 = BASE_DIR / "data" / "processed" / "20260729_190825_dynamic001_processed_3.csv"
     
     plot_imu_datasets(
         RAW_FILE,
         PROCESSED_FILE,
         PROCESSED_FILE_2,
+        PROCESSED_FILE_3,
         output_plot = BASE_DIR / "data" / "plots" / "imu_data_comparison_dynamic001.png",
         title = "IMU Data Comparison: Raw vs Processed"
         )
