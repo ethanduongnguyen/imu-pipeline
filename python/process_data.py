@@ -28,21 +28,8 @@ def run_processing_pipeline():
     
     # Apply filters. Select filter from filters.py script
     
-    # print("Applying Moving Average filter...")
-    # MovingAverageFilter = MovingAverage(window_size= 5, num_channels = 3)
-    
-    # dataset.accel = MovingAverageFilter.apply(dataset.accel)
-    
-    # MovingAverageFilter.reset()
-    # dataset.gyro = MovingAverageFilter.apply(dataset.gyro)
-    
-    # dataset.metadata["filtering"] = {
-    #     "applied": True,
-    #     "accel_filter": MovingAverageFilter.getMetadata(),
-    #     "gyro_filter": MovingAverageFilter.getMetadata()
-    # }
-    
-    print("Applying Expoential Moving Average filter...")
+    print("Applying filter...")
+    MovingAverageFilter = MovingAverage(window_size = 5, num_channels=3)
     ExponentialMovingAverageFilter = ExponentialMovingAverage(alpha = 0.5)
     
     dataset.accel = ExponentialMovingAverageFilter.apply(dataset.accel)

@@ -43,6 +43,17 @@ class IMUDataset:
                 json.dump(self.metadata, file, indent=4)
             print(f"Metadata saved to {metadata_path}")
     
+    @property
+    def sampling_rate(self) -> float:
+        # Calculate average sampling rate in Hz
+        if len(self.time) < 2:
+            return 0.0
+        
+        # Calculate average time difference between samples (delta t)
+        avg_dt = np.mean(np.diff(self.time))
+        if avg_dt == 0:
+            return 0.0
+    
 def load_imu_dataset(file_path: Path) -> IMUDataset | None:
     csv_path = Path(file_path)
     if not csv_path.exists():
