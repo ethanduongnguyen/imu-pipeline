@@ -6,6 +6,30 @@ from calculate_raw_accel import calculate_raw_accel
 from matchIMUandVicon import matchIMUandVicon
 from split_vicon_csv import split_vicon_csv
 
+def load_imu_txt(txt_path: Path) -> np.ndarray:
+    """
+    Loads the raw IMU txt and mimics the way that MATLAB does it -- finds the widest row and pads all shorter rows with NaN (Not a Number)
+    """
+    
+    with open(txt_path, 'r') as f:
+        lines = f.readlines()
+
+    rows = [line.strip().split(',') for line in lines if line.strip() != '']
+    if not rows:
+        raise ValueError(f"No data found in {txt_path}")
+
+    max_width = max(len(row) for row in rows)
+    data = np.full((len(rows), max_width), np.nan)
+
+    for i, row in enumerate(rows):
+        for j, val in enumerate(row):
+            try:
+                data[i, j] = float(val)
+            except ValueError:
+                data[i, j] = np.nan  # e.g. the leading 'frame\tfrequency\tVicon\tIMU0' text token
+
+    return data
+
 def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'calibrate.mat') -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Translates processTrial.m into Python
@@ -28,7 +52,7 @@ def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'c
     df_joints, df_trajectories = split_vicon_csv(filename_base, trial_subfolder)
     
     # Load the data from IMU and Vicon
-    trial_imu = np.genfromtxt(txt_path, dtype=float, delimiter=',')
+    trial_imu = load_imu_txt(txt_path)
     trial_vicon_trajectories = df_trajectories.to_numpy(dtype=float)
     
     
@@ -117,6 +141,6 @@ def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'c
 
 if __name__ == "__main__":
     processed_data = process_trial(
-        filename_base='std2KN2',
+        filename_base='std2KN1',
         trial_subfolder='0727_Ethan_data'
     )

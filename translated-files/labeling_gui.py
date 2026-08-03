@@ -434,8 +434,8 @@ class LabelingApp(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = LabelingApp(
-        filebase_name = 'std2KN1',
+        filebase_name = 'std2KN2_2',
         trial_subfolder = '0727_Ethan_data'
     )
     window.show()
-    sys.exit(app.exec())    
+    sys.exit(app.exec())

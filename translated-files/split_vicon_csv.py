@@ -48,11 +48,11 @@ def split_vicon_csv(filename_base: str, trial_subfolder: str, second_table_heade
             f_out.writelines(lines[split_row_index:])
         
         # Read the first table (Joints) and the second table (Trajectories) into separate DataFrames
-        df_joints = pd.read_csv(joints_output_path, skiprows=4)
-        df_trajectories = pd.read_csv(trajectories_output_path, skiprows=4)
+        df_joints = pd.read_csv(joints_output_path, skiprows=4, on_bad_lines='skip')
+        df_trajectories = pd.read_csv(trajectories_output_path, skiprows=4, on_bad_lines='skip')
         
-        # print(f"First table (Joints) shape: {df_joints.shape}. Saved to: {joints_output_path.resolve()}")
-        # print(f"Second table (Trajectories) shape: {df_trajectories.shape}. Saved to: {trajectories_output_path.resolve()}")
+        print(f"First table (Joints) shape: {df_joints.shape}. Saved to: {joints_output_path.resolve()}")
+        print(f"Second table (Trajectories) shape: {df_trajectories.shape}. Saved to: {trajectories_output_path.resolve()}")
         
         return df_joints, df_trajectories
     else:
@@ -60,7 +60,7 @@ def split_vicon_csv(filename_base: str, trial_subfolder: str, second_table_heade
         
 if __name__ == "__main__":
     # Example usage
-    filename_base = "std2KN1"
+    filename_base = "std2KN2_2"
     trial_subfolder = "0727_Ethan_data"
     second_table_header = "Trajectories"
     
