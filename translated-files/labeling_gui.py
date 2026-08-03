@@ -29,6 +29,16 @@ class LabelingApp(QMainWindow):
         self.pending_index = None
         self.finished = False
         
+        # Explicit handles to the drawn InfiniteLine objects, keyed by index
+        # for committed boundaries, so a specific line can be removed
+        # directly (e.g. on undo) instead of relying on a full clear/redraw.
+        self.boundary_lines = {}
+        self.pending_line = None
+        
+        # History of committed labeling actions, for undo. Each entry is a
+        # dict: {'type': 'label' | 'finish', 'start_idx', 'end_idx', 'label_value'}
+        self.action_history = []
+        
         # Main widgets and layouts
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -114,6 +124,11 @@ class LabelingApp(QMainWindow):
             btn.setShortcut(QKeySequence(str(val)))
             btn.clicked.connect(lambda checked, v=val: self.apply_label(v))
             sidebar_layout.addWidget(btn)
+        
+        self.undo_btn = QPushButton("Undo Last Boundary [Ctrl+Z]")
+        self.undo_btn.setShortcut(QKeySequence("Ctrl+Z"))
+        self.undo_btn.clicked.connect(self.undo_last_boundary)
+        sidebar_layout.addWidget(self.undo_btn)
             
         finish_title = QLabel("<b>Finish Trial</b>")
         sidebar_layout.addWidget(finish_title)
@@ -163,6 +178,9 @@ class LabelingApp(QMainWindow):
             self.boundary_indices = [0]
             self.pending_index = None
             self.finished = False
+            self.boundary_lines = {}
+            self.pending_line = None
+            self.action_history = []
             
             self.view_selector.setEnabled(True)
             self.plot_real_data()
@@ -195,15 +213,22 @@ class LabelingApp(QMainWindow):
             
             raw_idx = np.searchsorted(self.t_imu, clicked_time)
             idx = int(np.clip(raw_idx, 0, len(self.t_imu) - 1))
-                
-            self.pending_index = idx
             
-            self.plot_real_data()
+            # Remove the previous pending line (if any) and draw the new one directly,
+            # rather than clearing/redrawing the whole canvas.
+            if self.pending_line is not None:
+                self.plot_canvas.removeItem(self.pending_line)
+                self.pending_line = None
+            
+            self.pending_index = idx
+            self.pending_line = self.add_marker_line(self.t_imu[idx], committed=False)
+            
             self.update_status_label()
             
     def add_marker_line(self, x_time, committed = True):
         """
-        Draws a vertical dashed line at the clicked marker
+        Draws a vertical dashed line at the clicked marker. Returns the created
+        line object so callers can track and later remove it directly.
         """
         if committed:
             pen = pg.mkPen(color='w', width=2, style=PyQt6.QtCore.Qt.PenStyle.DashLine)
@@ -212,6 +237,7 @@ class LabelingApp(QMainWindow):
         
         line = pg.InfiniteLine(pos=x_time, angle=90, movable=False, pen=pen)
         self.plot_canvas.addItem(line)
+        return line
         
     def plot_real_data(self):
         """
@@ -285,12 +311,16 @@ class LabelingApp(QMainWindow):
             self.plot_canvas.plot(self.t_imu, IMU_left_thigh, name="Left Thigh Pitch", pen=pen_orange)
             self.plot_canvas.plot(self.t_imu, IMU_right_thigh, name="Right Thigh Pitch", pen=pen_pink)
         
+        # clear() wipes all previously tracked line objects, so rebuild the
+        # tracking dict/reference fresh alongside redrawing them.
+        self.boundary_lines = {}
         for idx in self.boundary_indices:
             if 0 <= idx < len(self.t_imu):
-                self.add_marker_line(self.t_imu[idx], committed=True)
-                
+                self.boundary_lines[idx] = self.add_marker_line(self.t_imu[idx], committed=True)
+        
+        self.pending_line = None
         if self.pending_index is not None:
-            self.add_marker_line(self.t_imu[self.pending_index], committed = False)
+            self.pending_line = self.add_marker_line(self.t_imu[self.pending_index], committed=False)
         
         self.plot_canvas.autoRange()
         
@@ -319,12 +349,25 @@ class LabelingApp(QMainWindow):
         # Update array
         self.imu_label[start_idx: end_idx] = label_value
         
+        # Remove the pending line -- it's about to become a committed one
+        if self.pending_line is not None:
+            self.plot_canvas.removeItem(self.pending_line)
+            self.pending_line = None
+        
         # Commit pending boundary
         self.boundary_indices.append(end_idx)
         self.pending_index = None
+        self.action_history.append({
+            'type': 'label',
+            'start_idx': start_idx,
+            'end_idx': end_idx,
+            'label_value': label_value
+        })
+        
+        # Draw the committed line directly and track its handle
+        self.boundary_lines[end_idx] = self.add_marker_line(self.t_imu[end_idx], committed=True)
         
         self.update_label_plot()
-        self.plot_real_data()
         self.update_status_label()
         
         print(f"Applied label {label_value} ({self.states[label_value]}) to frames {start_idx}-{end_idx}")
@@ -349,8 +392,24 @@ class LabelingApp(QMainWindow):
         
         self.imu_label[start_idx:last_idx + 1] = label_value
         
+        # Remove the pending line -- it's about to become a committed one
+        if self.pending_line is not None:
+            self.plot_canvas.removeItem(self.pending_line)
+            self.pending_line = None
+        
         self.boundary_indices.append(last_idx)
         self.pending_index = None
+        self.finished = True
+        self.action_history.append({
+            'type': 'finish',
+            'start_idx': start_idx,
+            'end_idx': last_idx,
+            'label_value': label_value
+        })
+        # Draw the final committed line directly and track its handle
+        self.boundary_lines[last_idx] = self.add_marker_line(self.t_imu[last_idx], committed=True)
+        
+        self.update_label_plot()
         self.update_status_label()
         
         print(f"Applied label {label_value} ({self.states[label_value]}) to frames {start_idx}--{last_idx}"
@@ -392,6 +451,57 @@ class LabelingApp(QMainWindow):
         except Exception as e:
             print(f"Error saving {self.filebase_name} file: {e}")
             self.status_label.setText("Error saving file. Check console.")
+        
+    def undo_last_boundary(self):
+        """
+        Reverts the most recently committed boundary (from apply_label or
+        finish_trial), restoring imu_label for that region back to 0 and
+        removing the boundary. Can be called repeatedly to step back through
+        multiple committed boundaries. Discards any uncommitted pending click
+        first, since undo acts on the last *committed* action.
+        """
+        if self.imu_label is None:
+            print("Please load data first.")
+            return
+        
+        if not self.action_history:
+            print("Nothing to undo.")
+            return
+        
+        # Discard any uncommitted pending click/line -- undo targets committed boundaries
+        if self.pending_line is not None:
+            self.plot_canvas.removeItem(self.pending_line)
+            self.pending_line = None
+        self.pending_index = None
+        
+        action = self.action_history.pop()
+        start_idx = action['start_idx']
+        end_idx = action['end_idx']
+        
+        if action['type'] == 'finish':
+            self.imu_label[start_idx:end_idx + 1] = 0
+            self.finished = False
+        else:
+            self.imu_label[start_idx:end_idx] = 0
+        
+        # Explicitly remove the exact line object this action created
+        line_to_remove = self.boundary_lines.pop(end_idx, None)
+        if line_to_remove is not None:
+            self.plot_canvas.removeItem(line_to_remove)
+        
+        # Remove the boundary this action committed
+        if self.boundary_indices and self.boundary_indices[-1] == end_idx:
+            self.boundary_indices.pop()
+        
+        # Restore the undone boundary as a pending line so it can be immediately relabeled
+        self.pending_index = end_idx
+        self.pending_line = self.add_marker_line(self.t_imu[end_idx], committed=False)
+        
+        self.update_label_plot()
+        self.update_status_label()
+        
+        print(f"Undid label {action['label_value']} ({self.states[action['label_value']]}) "
+              f"for frames {start_idx}-{end_idx}")
         
     def update_status_label(self):
         """
