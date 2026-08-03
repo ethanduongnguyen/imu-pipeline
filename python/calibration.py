@@ -26,7 +26,7 @@ def saveOffsets(offsets: dict, output_json: Path):
     
 def loadOffsets(input_json: Path) -> dict:
     # Loads calibration offsets from JSON file
-    if not input_json.exists:
+    if not input_json.exists():
         print(f"Calibration file not found: {input_json}")
         return None
     
@@ -53,7 +53,7 @@ def applyOffsets(dataset: IMUDataset, offsets: dict):
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent
     STATIC_FILE = BASE_DIR / "data" / "raw" / "20260726_234729_static002.csv"
-    OFFSETS_FILE = BASE_DIR / "data" / "calibrated" / "sensor_offsets.json"
+    OFFSETS_FILE = BASE_DIR / "data" / "calibration" / "sensor_offsets.json"
 
     static_dataset = load_imu_dataset(STATIC_FILE)
     if static_dataset:
