@@ -1,7 +1,6 @@
-# IMU Learning
+# IMU Pipeline
 
-Learning IMU data acquisition and processing using an ESP32 and MPU6050
-
+Learning IMU data acquisition and processing using an ESP32 and MPU6050. Also includes translations of research-grade IMU processing pipelines from MATLAB into Python
 ## Hardware
 
 - ESP32
