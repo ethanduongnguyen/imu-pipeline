@@ -20,6 +20,8 @@ class LabelingApp(QMainWindow):
         
         self.data_imu = None
         self.vicon_joints = None
+        self.vicon_knee_vel = None
+        self.alignment_ids = None
         self.t_imu = None
         self.t_vicon = None
         self.imu_label = None
@@ -86,11 +88,13 @@ class LabelingApp(QMainWindow):
         sidebar_layout.addWidget(QLabel("<b>Toggle Sensor View</b>"))
         self.view_selector = QComboBox()
         self.view_selector.addItems([
+            "Vicon-IMU Index Alignment",
             "Shank Omegas",
             "Torso Acceleration",
             "Torso Omega",
             "Shank Accelerations",
-            "Height, Joint Angles, and Pitch"
+            "Height, Joint Angles, and Pitch",
+            "Knee Angular Velocity"
         ])
         
         self.view_selector.currentIndexChanged.connect(self.plot_real_data)
@@ -162,7 +166,7 @@ class LabelingApp(QMainWindow):
             #         filename_base = "std2KN1"
             #         trial_subfolder = "0727_Ethan_data"
             #     )
-            self.data_imu, self.vicon_joints, self.t_imu, self.t_vicon = process_trial(
+            self.data_imu, self.vicon_joints, self.vicon_knee_vel, self.alignment_ids, self.t_imu, self.t_vicon = process_trial(
                 self.filebase_name,
                 self.trial_subfolder
             )
@@ -258,69 +262,96 @@ class LabelingApp(QMainWindow):
         pen_blue = pg.mkPen(color=(0,0,255), width=1)
         pen_orange = pg.mkPen(color=(255,165,0), width=1)
         
-        if current_view == "Shank Omegas":
-            leftshank_omega = self.data_imu[:, 13]
-            rightshank_omega = self.data_imu[:, 22]
-            
-            self.plot_canvas.plot(self.t_imu, leftshank_omega, name="Left Shank Omega", pen=pen_cyan)
-            self.plot_canvas.plot(self.t_imu, rightshank_omega, name="Right Shank Omega", pen=pen_red)
+        if current_view == "Vicon-IMU Index Alignment":
+            self.plot_canvas.setLabel('bottom', 'VICON Index')
+            self.plot_canvas.setLabel('left', 'IMU Index')
+            if self.alignment_ids is not None:
+                id_vicon, id_imu = self.alignment_ids
+                self.plot_canvas.plot(
+                    id_vicon, id_imu,
+                    pen=None,
+                    symbol='o',
+                    symbolSize=3,
+                    symbolBrush=(0, 255, 255),
+                    name="Alignment Points"
+                )
+        else:
+            self.plot_canvas.setLabel('bottom', 'Time (s)')
+            self.plot_canvas.setLabel('left', 'Amplitude')
         
-        elif current_view == "Torso Acceleration":
-            torso_acc_x = self.data_imu[:, 0]
-            torso_acc_y = self.data_imu[:, 1]
-            torso_acc_z = self.data_imu[:, 2]
+            if current_view == "Shank Omegas":
+                leftshank_omega = self.data_imu[:, 13]
+                rightshank_omega = self.data_imu[:, 22]
+                
+                self.plot_canvas.plot(self.t_imu, leftshank_omega, name="Left Shank Omega", pen=pen_cyan)
+                self.plot_canvas.plot(self.t_imu, rightshank_omega, name="Right Shank Omega", pen=pen_red)
             
-            self.plot_canvas.plot(self.t_imu, torso_acc_x, name="Torso Accel X", pen = pen_cyan)
-            self.plot_canvas.plot(self.t_imu, torso_acc_y, name="Torso Accel Y", pen = pen_red)
-            self.plot_canvas.plot(self.t_imu, torso_acc_z, name="Torso Accel Z", pen = pen_yellow)
+            elif current_view == "Torso Acceleration":
+                torso_acc_x = self.data_imu[:, 0]
+                torso_acc_y = self.data_imu[:, 1]
+                torso_acc_z = self.data_imu[:, 2]
+                
+                self.plot_canvas.plot(self.t_imu, torso_acc_x, name="Torso Accel X", pen = pen_cyan)
+                self.plot_canvas.plot(self.t_imu, torso_acc_y, name="Torso Accel Y", pen = pen_red)
+                self.plot_canvas.plot(self.t_imu, torso_acc_z, name="Torso Accel Z", pen = pen_yellow)
+                
+            elif current_view == "Torso Omega":
+                torso_omega_x = self.data_imu[:, 3]
+                torso_omega_y = self.data_imu[:, 4]
+                torso_omega_z = self.data_imu[:, 5]
+                
+                self.plot_canvas.plot(self.t_imu, torso_omega_x, name="Torso Omega X", pen = pen_cyan)
+                self.plot_canvas.plot(self.t_imu, torso_omega_y, name="Torso Omega Y", pen = pen_red)
+                self.plot_canvas.plot(self.t_imu, torso_omega_z, name="Torso Omega Z", pen = pen_yellow)
+                
+            elif current_view == "Shank Accelerations":
+                left_acc_x = self.data_imu[:, 9]
+                left_acc_y = self.data_imu[:, 10]
+                left_acc_z = self.data_imu[:, 11]
+                right_acc_x = self.data_imu[:, 18]
+                right_acc_y = self.data_imu[:, 19]
+                right_acc_z = self.data_imu[:, 20]
+                
+                self.plot_canvas.plot(self.t_imu, left_acc_x, name="Left Shank Accel X", pen=pen_cyan)
+                self.plot_canvas.plot(self.t_imu, left_acc_y, name="Left Shank Accel Y", pen=pen_red)
+                self.plot_canvas.plot(self.t_imu, left_acc_z, name="Left Shank Accel Z", pen=pen_yellow)
+                self.plot_canvas.plot(self.t_imu, right_acc_x, name="Right Shank Accel Z", pen=pen_pink) 
+                self.plot_canvas.plot(self.t_imu, right_acc_y, name="Right Shank Accel Z", pen=pen_blue) 
+                self.plot_canvas.plot(self.t_imu, right_acc_z, name="Right Shank Accel Z", pen=pen_orange) 
+                
+            elif current_view == "Height, Joint Angles, and Pitch":
+                torso_height = self.vicon_joints[:,20]
+                left_knee = self.vicon_joints[:,0]
+                right_knee = self.vicon_joints[:,5]
+                IMU_left_thigh = self.data_imu[:,16]
+                IMU_right_thigh = self.data_imu[:,25]
+                
+                self.plot_canvas.plot(self.t_vicon, torso_height, name="Torso Height", pen=pen_yellow)
+                self.plot_canvas.plot(self.t_vicon, left_knee, name="Left Knee Joint Angle", pen=pen_cyan)
+                self.plot_canvas.plot(self.t_vicon, right_knee, name="Right Knee Joint Angle", pen=pen_red)
+                self.plot_canvas.plot(self.t_imu, IMU_left_thigh, name="Left Thigh Pitch", pen=pen_orange)
+                self.plot_canvas.plot(self.t_imu, IMU_right_thigh, name="Right Thigh Pitch", pen=pen_pink)
+                
+            elif current_view == "Knee Angular Velocity":
+                if self.vicon_knee_vel is not None:
+                    self.plot_canvas.plot(self.t_vicon, self.vicon_knee_vel[:, 0], name="Left Knee Velocity", pen=pen_cyan)
+                    self.plot_canvas.plot(self.t_vicon, self.vicon_knee_vel[:, 1], name="Right Knee Velocity", pen=pen_red)
+                    
+                    # Threshold lines at +/- 20 deg/s
+                    pen_thresh = pg.mkPen(color=(200, 200, 200), width=1.5)
+                    self.plot_canvas.addItem(pg.InfiniteLine(pos=20, angle=0, movable=False, pen=pen_thresh))
+                    self.plot_canvas.addItem(pg.InfiniteLine(pos=-20, angle=0, movable=False, pen=pen_thresh))
             
-        elif current_view == "Torso Omega":
-            torso_omega_x = self.data_imu[:, 3]
-            torso_omega_y = self.data_imu[:, 4]
-            torso_omega_z = self.data_imu[:, 5]
+            # clear() wipes all previously tracked line objects, so rebuild the
+            # tracking dict/reference fresh alongside redrawing them.
+            self.boundary_lines = {}
+            for idx in self.boundary_indices:
+                if 0 <= idx < len(self.t_imu):
+                    self.boundary_lines[idx] = self.add_marker_line(self.t_imu[idx], committed=True)
             
-            self.plot_canvas.plot(self.t_imu, torso_omega_x, name="Torso Omega X", pen = pen_cyan)
-            self.plot_canvas.plot(self.t_imu, torso_omega_y, name="Torso Omega Y", pen = pen_red)
-            self.plot_canvas.plot(self.t_imu, torso_omega_z, name="Torso Omega Z", pen = pen_yellow)
-            
-        elif current_view == "Shank Accelerations":
-            left_acc_x = self.data_imu[:, 9]
-            left_acc_y = self.data_imu[:, 10]
-            left_acc_z = self.data_imu[:, 11]
-            right_acc_x = self.data_imu[:, 18]
-            right_acc_y = self.data_imu[:, 19]
-            right_acc_z = self.data_imu[:, 20]
-            
-            self.plot_canvas.plot(self.t_imu, left_acc_x, name="Left Shank Accel X", pen=pen_cyan)
-            self.plot_canvas.plot(self.t_imu, left_acc_y, name="Left Shank Accel Y", pen=pen_red)
-            self.plot_canvas.plot(self.t_imu, left_acc_z, name="Left Shank Accel Z", pen=pen_yellow)
-            self.plot_canvas.plot(self.t_imu, right_acc_x, name="Right Shank Accel Z", pen=pen_pink) 
-            self.plot_canvas.plot(self.t_imu, right_acc_y, name="Right Shank Accel Z", pen=pen_blue) 
-            self.plot_canvas.plot(self.t_imu, right_acc_z, name="Right Shank Accel Z", pen=pen_orange) 
-            
-        elif current_view == "Height, Joint Angles, and Pitch":
-            torso_height = self.vicon_joints[:,20]
-            left_knee = self.vicon_joints[:,0]
-            right_knee = self.vicon_joints[:,5]
-            IMU_left_thigh = self.data_imu[:,16]
-            IMU_right_thigh = self.data_imu[:,25]
-            
-            self.plot_canvas.plot(self.t_vicon, torso_height, name="Torso Height", pen=pen_yellow)
-            self.plot_canvas.plot(self.t_vicon, left_knee, name="Left Knee Joint Angle", pen=pen_cyan)
-            self.plot_canvas.plot(self.t_vicon, right_knee, name="Right Knee Joint Angle", pen=pen_red)
-            self.plot_canvas.plot(self.t_imu, IMU_left_thigh, name="Left Thigh Pitch", pen=pen_orange)
-            self.plot_canvas.plot(self.t_imu, IMU_right_thigh, name="Right Thigh Pitch", pen=pen_pink)
-        
-        # clear() wipes all previously tracked line objects, so rebuild the
-        # tracking dict/reference fresh alongside redrawing them.
-        self.boundary_lines = {}
-        for idx in self.boundary_indices:
-            if 0 <= idx < len(self.t_imu):
-                self.boundary_lines[idx] = self.add_marker_line(self.t_imu[idx], committed=True)
-        
-        self.pending_line = None
-        if self.pending_index is not None:
-            self.pending_line = self.add_marker_line(self.t_imu[self.pending_index], committed=False)
+            self.pending_line = None
+            if self.pending_index is not None:
+                self.pending_line = self.add_marker_line(self.t_imu[self.pending_index], committed=False)
         
         self.plot_canvas.autoRange()
         
@@ -457,8 +488,7 @@ class LabelingApp(QMainWindow):
         Reverts the most recently committed boundary (from apply_label or
         finish_trial), restoring imu_label for that region back to 0 and
         removing the boundary. Can be called repeatedly to step back through
-        multiple committed boundaries. Discards any uncommitted pending click
-        first, since undo acts on the last *committed* action.
+        multiple committed boundaries. 
         """
         if self.imu_label is None:
             print("Please load data first.")
@@ -544,8 +574,8 @@ class LabelingApp(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = LabelingApp(
-        filebase_name = 'std2KN2_2',
-        trial_subfolder = '0727_Ethan_data'
+        filebase_name = 'welding123',
+        trial_subfolder = '0727_Xinyan_data'
     )
     window.show()
     sys.exit(app.exec())

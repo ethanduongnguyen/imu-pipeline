@@ -1,7 +1,9 @@
 import numpy as np
 import scipy.io as sio
+import pandas as pd
 from pathlib import Path
 from typing import Tuple
+from scipy.signal import butter, filtfilt
 from calculate_raw_accel import calculate_raw_accel
 from matchIMUandVicon import matchIMUandVicon
 from split_vicon_csv import split_vicon_csv
@@ -30,10 +32,10 @@ def load_imu_txt(txt_path: Path) -> np.ndarray:
 
     return data
 
-def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'calibrate.mat') -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'calibrate.mat') -> Tuple[np.ndarray, np.ndarray, np.ndarray, Tuple[np.ndarray, np.ndarray], np.ndarray, np.ndarray]:
     """
     Translates processTrial.m into Python
-    Loads raw IMU and Vicon data, applies calibration, synchronizes timestamps, and calculates raw acceleration
+    Loads raw IMU and Vicon data, applies calibration, synchronizes timestamps, and calculates raw acceleration and knee angular velocities
     Returns a unified IMU feature array
 
     Parameters:
@@ -74,8 +76,9 @@ def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'c
     trial_vicon_joints = trial_vicon_joints_raw[idx_joints[0]:,2:]
     
     # Time synchronization between IMU and Vicon
-    ratio, raio_round, id_vicon, id_imu = matchIMUandVicon(trial_vicon_from_imu[:, 0:3], trial_vicon[:, 0:3])
+    ratio, ratio_round, id_vicon, id_imu = matchIMUandVicon(trial_vicon_from_imu[:, 0:3], trial_vicon[:, 0:3])
     m, b = ratio[0], ratio[1]
+    alignment_ids = (id_vicon, id_imu)
     
     # Create time arrays
     fs_v = 100.0  # Vicon sampling frequency
@@ -96,6 +99,22 @@ def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'c
     # print(f"t_vicon[0] = {t_vicon[0]:.10f}, t_vicon[-1] = {t_vicon[-1]:.10f}")
     # print(f"first/last idx_imu in mask: {idx_imu[mask][0]} / {idx_imu[mask][-1]}")
     
+    fc = 5 # Cutoff frequency
+    b_butter, a_butter = butter(2, fc / (fs_v / 2.0), btype ='low')
+    
+    knee_L_raw = trial_vicon_joints[:, 0]
+    knee_R_raw = trial_vicon_joints[:, 5]
+    
+    knee_L_clean = pd.Series(knee_L_raw).interpolate(method='linear').ffill().bfill().to_numpy()
+    knee_R_clean = pd.Series(knee_R_raw).interpolate(method='linear').ffill().bfill().to_numpy()
+    
+    knee_L_filt = filtfilt(b_butter, a_butter, knee_L_clean)
+    knee_R_filt = filtfilt(b_butter, a_butter, knee_R_clean)
+    
+    knee_vel_L = np.gradient(knee_L_filt) * fs_v
+    knee_vel_R = np.gradient(knee_R_filt) * fs_v
+    vicon_knee_vel = np.column_stack([knee_vel_L, knee_vel_R])
+       
     # Extract and format IMU data (Torso, Left Shank, Right Shank)
     imu_dict = {}
     sensor_names = ['Torso', 'Leftshank', 'Rightshank']
@@ -137,10 +156,10 @@ def process_trial(filename_base: str, trial_subfolder: str, calib_file: str = 'c
     
     # np.savetxt("data_imu_python.csv", data_imu, delimiter=",", fmt="%.4f")
     
-    return data_imu, trial_vicon_joints, t_imu_masked, t_vicon
+    return data_imu, trial_vicon_joints, vicon_knee_vel, alignment_ids, t_imu_masked, t_vicon
 
 if __name__ == "__main__":
     processed_data = process_trial(
-        filename_base='std2KN1',
-        trial_subfolder='0727_Ethan_data'
+        filename_base='welding123',
+        trial_subfolder='0727_Xinyan_data'
     )
