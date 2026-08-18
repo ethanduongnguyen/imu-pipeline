@@ -25,6 +25,7 @@ class LabelingApp(QMainWindow):
         self.t_imu = None
         self.t_vicon = None
         self.imu_label = None
+        self.nuc_predictions = None
         
         # Marker tracking for point-and-click labeling
         self.boundary_indices = []
@@ -120,7 +121,7 @@ class LabelingApp(QMainWindow):
         sidebar_layout.addWidget(label_title)
         
         self.states = {
-            0: "Standing", 1: "Squatting", 2: "One-Legged Kneeling", 3: "Move Up", 4: "Move Down", 5: "Doubled-Legged Kneeling"
+            0: "Standing", 1: "Squatting", 2: "One-Legged Kneeling (R)", 3: "Move Up", 4: "Move Down", 5: "Doubled-Legged Kneeling", 6: "Stepping", 7: "One-Legged Kneeling (L)"
         }
         
         for val, name in self.states.items():
@@ -166,7 +167,7 @@ class LabelingApp(QMainWindow):
             #         filename_base = "std2KN1"
             #         trial_subfolder = "0727_Ethan_data"
             #     )
-            self.data_imu, self.vicon_joints, self.vicon_knee_vel, self.alignment_ids, self.t_imu, self.t_vicon = process_trial(
+            self.data_imu, self.vicon_joints, self.vicon_knee_vel, self.alignment_ids, self.t_imu, self.t_vicon, self.nuc_predictions = process_trial(
                 self.filebase_name,
                 self.trial_subfolder
             )
@@ -567,6 +568,11 @@ class LabelingApp(QMainWindow):
         """
         self.label_canvas.clear()
         
+        # Plot NUC prediction as a faint dashed grey line for reference
+        if hasattr(self, 'nuc_predictions') and self.nuc_predictions is not None:
+            pen_nuc = pg.mkPen(color=(150, 150, 150), width=1.5, style=PyQt6.QtCore.Qt.PenStyle.DashLine)
+            self.label_canvas.plot(self.t_imu, self.nuc_predictions, pen=pen_nuc, name="NUC Prediction")
+        
         if self.imu_label is not None:
             pen = pg.mkPen(color=(255,0,0), width=2)
             self.label_canvas.plot(self.t_imu, self.imu_label, pen=pen)
@@ -574,8 +580,8 @@ class LabelingApp(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = LabelingApp(
-        filebase_name = 'welding123',
-        trial_subfolder = '0727_Xinyan_data'
+        filebase_name = 'Activity_detect',
+        trial_subfolder = '0817_data'
     )
     window.show()
     sys.exit(app.exec())
